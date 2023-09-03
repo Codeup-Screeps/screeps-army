@@ -10,7 +10,7 @@ class Battalion {
         this.spawns = Object.values(Game.spawns);
         this.rooms = Object.values(Game.rooms).filter((room) => room.controller && room.controller.my);
         this.gcl = Game.gcl;
-        this.hhc = new HHC(this);
+        this.hhc = new HHC(this); // (Headquarters and Headquarters Company) Manages battalion special operations staff
         this.s1 = new BattalionS1(this); // (Personnel) Manages human resources
         this.s2 = new BattalionS2(this); // (Intelligence) Gathers and analyzes intelligence
         this.s3 = new BattalionS3(this); // (Operations) Plans and organizes missions
