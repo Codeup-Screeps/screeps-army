@@ -1,0 +1,4 @@
+node_modules
+screeps.json
+dist
+.screeps.yaml
