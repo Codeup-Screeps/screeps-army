@@ -36,6 +36,9 @@ class Hauler extends Soldier {
         if (this.resupplyTowers()) {
             return;
         }
+        if (this.resupplyLinks()) {
+            return;
+        }
         if (this.resupplyContainer()) {
             return;
         }
@@ -57,6 +60,9 @@ class Hauler extends Soldier {
             if (this.collectStorage()) {
                 return;
             }
+        }
+        if (this.collectSourceContainer()) {
+            return;
         }
         if (this.collectGround(this.creep.memory.source)) {
             return;

@@ -178,14 +178,10 @@ class Bunker {
             ],
         };
         this.container = {
-            pos: [
-                { x: 18, y: 15 },
-                { x: 28, y: 15 },
-                { x: 23, y: 10 },
-                { x: 23, y: 20 },
-            ],
+            pos: [],
         };
         this.storage = { pos: [{ x: 23, y: 16 }] };
+        this.link = { pos: [{ x: 22, y: 15 }] };
     }
 }
 

@@ -30,6 +30,11 @@ class Engineer extends Soldier {
     }
     work() {
         if (this.creep.memory.assignment === "build") {
+            if (this.creep.memory.specialJob) {
+                if (this.build(this.creep.memory.specialJob)) {
+                    return;
+                }
+            }
             if (this.build()) {
                 return;
             }
@@ -54,7 +59,23 @@ class Engineer extends Soldier {
             }
         }
     }
-    build() {
+    build(id = null) {
+        if (id) {
+            const target = Game.getObjectById(id);
+            if (target) {
+                const buildResult = this.creep.build(target);
+                if (buildResult == ERR_NOT_IN_RANGE) {
+                    this.creep.moveTo(target);
+                    return true;
+                }
+                return;
+            } else {
+                if (this.resupplySpawn()) {
+                    return;
+                }
+            }
+            return;
+        }
         // find construction sites
         let targets = this.creep.room.find(FIND_CONSTRUCTION_SITES);
         // remove ramparts that have over 50k hits
@@ -94,7 +115,20 @@ class Engineer extends Soldier {
         }
     }
     collect() {
+        if (this.creep.memory.specialJob) {
+            if (this.collectContainer()) {
+                return;
+            }
+            if (this.collectGround()) {
+                return;
+            }
+            this.collectSource();
+            return;
+        }
         if (this.collectGround()) {
+            return;
+        }
+        if (this.collectLink()) {
             return;
         }
         if (this.collectContainer()) {

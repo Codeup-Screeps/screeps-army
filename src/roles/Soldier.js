@@ -84,9 +84,19 @@ class Soldier {
         const containers = this.creep.room.find(FIND_STRUCTURES, {
             filter: (s) => s.structureType == STRUCTURE_CONTAINER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
         });
+        //filter out containers that are near sources
+        const sources = this.creep.room.find(FIND_SOURCES);
+        const containersAwayFromSources = containers.filter((container) => {
+            for (let source of sources) {
+                if (container.pos.getRangeTo(source) < 3) {
+                    return false;
+                }
+            }
+            return true;
+        });
 
-        if (containers.length > 0) {
-            const closestContainer = this.creep.pos.findClosestByPath(containers);
+        if (containersAwayFromSources.length > 0) {
+            const closestContainer = this.creep.pos.findClosestByPath(containersAwayFromSources);
             if (this.creep.transfer(closestContainer, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                 this.creep.moveTo(closestContainer);
                 return true; // Exit early if we're moving to a container or storage
@@ -103,6 +113,28 @@ class Soldier {
             const closestStorage = this.creep.pos.findClosestByPath(storage);
             if (this.creep.transfer(closestStorage, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                 this.creep.moveTo(closestStorage);
+                return true; // Exit early if we're moving to a container or storage
+            }
+        } else {
+            return false;
+        }
+    }
+    resupplyLinks() {
+        const links = this.creep.room.find(FIND_STRUCTURES, {
+            filter: (structure) => structure.structureType == STRUCTURE_LINK && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
+        });
+        // get links saved in room.memory.links.senders
+        if (this.creep.room.memory.links === undefined) {
+            return false;
+        }
+        const senderLinkIDs = this.creep.room.memory.links.senders;
+        let senderLinks = links.filter((link) => senderLinkIDs.includes(link.id));
+        // filter out links that are full
+        senderLinks = senderLinks.filter((link) => link.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
+        if (senderLinks.length > 0) {
+            const closestLink = this.creep.pos.findClosestByPath(senderLinks);
+            if (this.creep.transfer(closestLink, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                this.creep.moveTo(closestLink);
                 return true; // Exit early if we're moving to a container or storage
             }
         } else {
@@ -128,7 +160,9 @@ class Soldier {
             let target;
             if (!source) {
                 const spawn = this.creep.pos.findClosestByRange(FIND_MY_SPAWNS);
-                droppedEnergy = droppedEnergy.filter((resource) => spawn.pos.getRangeTo(resource) < 3);
+                if (spawn) {
+                    droppedEnergy = droppedEnergy.filter((resource) => spawn.pos.getRangeTo(resource) < 3);
+                }
             }
             if (droppedEnergy.length > 0) {
                 // closest energy first
@@ -157,10 +191,19 @@ class Soldier {
         }
     }
     collectContainer() {
-        const containers = this.creep.room.find(FIND_STRUCTURES, {
+        let containers = this.creep.room.find(FIND_STRUCTURES, {
             filter: (s) => (s.structureType == STRUCTURE_CONTAINER || s.structureType == STRUCTURE_STORAGE) && s.store[RESOURCE_ENERGY] > 0,
         });
-
+        // filter out containers within range 3 of sources
+        const sources = this.creep.room.find(FIND_SOURCES);
+        containers = containers.filter((container) => {
+            for (let source of sources) {
+                if (container.pos.getRangeTo(source) < 3) {
+                    return false;
+                }
+            }
+            return true;
+        });
         if (containers.length > 0) {
             const closestContainer = this.creep.pos.findClosestByPath(containers);
             if (this.creep.withdraw(closestContainer, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
@@ -170,8 +213,39 @@ class Soldier {
         }
         return false;
     }
+    collectLink() {
+        const links = Game.rooms[this.creep.memory.company].find(FIND_STRUCTURES, {
+            filter: (structure) => structure.structureType == STRUCTURE_LINK && structure.store[RESOURCE_ENERGY] > 0,
+        });
+        if (links.length > 0) {
+            // console.log(`${this.creep.name} found ${links.length} links`);
+            const closestLink = this.creep.pos.findClosestByPath(links);
+            if (this.creep.withdraw(closestLink, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                this.moveTo(closestLink);
+                return true; // Exit early if we're moving to a container or storage
+            }
+        }
+        return false;
+    }
+    collectSourceContainer() {
+        const containers = this.creep.room.find(FIND_STRUCTURES, {
+            filter: (s) => s.structureType == STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] > 0,
+        });
+        // get source from creep.memory.source
+        const source = Game.getObjectById(this.creep.memory.source);
+        // get containers near source
+        const containersNearSource = containers.filter((container) => container.pos.getRangeTo(source) < 3);
+        if (containersNearSource.length > 0) {
+            const closestContainer = this.creep.pos.findClosestByPath(containersNearSource);
+            if (this.creep.withdraw(closestContainer, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                this.moveTo(closestContainer);
+                return true; // Exit early if we're moving to a container or storage
+            }
+        }
+        return false;
+    }
     collectStorage() {
-        const storage = this.creep.room.find(FIND_STRUCTURES, {
+        const storage = Game.rooms[this.creep.memory.company].find(FIND_STRUCTURES, {
             filter: (structure) => structure.structureType == STRUCTURE_STORAGE && structure.store[RESOURCE_ENERGY] > 0,
         });
         if (storage.length > 0) {
@@ -182,6 +256,49 @@ class Soldier {
             }
         }
         return false;
+    }
+    collectSource() {
+        // Find sources in the room
+        const sources = this.creep.room.find(FIND_SOURCES);
+
+        // Filter sources based on the number of settled harvesters around them
+        const availableSources = sources.filter((source) => {
+            const positions = [
+                [source.pos.x - 1, source.pos.y - 1],
+                [source.pos.x, source.pos.y - 1],
+                [source.pos.x + 1, source.pos.y - 1],
+                [source.pos.x - 1, source.pos.y],
+                [source.pos.x + 1, source.pos.y],
+                [source.pos.x - 1, source.pos.y + 1],
+                [source.pos.x, source.pos.y + 1],
+                [source.pos.x + 1, source.pos.y + 1],
+            ];
+
+            let settledHarvesters = 0;
+
+            for (let pos of positions) {
+                const creepsAtPos = this.creep.room.lookForAt(LOOK_CREEPS, pos[0], pos[1]);
+                for (let creepAtPos of creepsAtPos) {
+                    if (creepAtPos.memory.settled && creepAtPos.memory.role === "sapper") {
+                        settledHarvesters++;
+                    }
+                }
+            }
+            return settledHarvesters < 1; // Choose sources with fewer than this amount of settled harvesters
+        });
+
+        // Find the closest available source to the creep
+        const closestAvailableSource = this.creep.pos.findClosestByRange(availableSources);
+        if (closestAvailableSource) {
+            const harvestResult = this.creep.harvest(closestAvailableSource);
+            if (harvestResult == ERR_NOT_IN_RANGE) {
+                this.creep.moveTo(closestAvailableSource, {
+                    visualizePathStyle: { stroke: "#ffaa00" },
+                    //   ignoreCreeps: true,
+                    reusePath: 1,
+                });
+            }
+        }
     }
 }
 

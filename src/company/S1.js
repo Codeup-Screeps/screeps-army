@@ -16,13 +16,13 @@ class CompanyS1 {
             scouts: this.company.soldiers.filter((soldier) => soldier.creep.memory.role === "scout"),
         };
         this.requiredPersonnel = {
-            engineer: this.sources.length * 2,
+            engineer: 2 + this.sources.length,
             hauler: this.sources.length,
             sapper: this.sources.length,
         };
         this.energyAvailable = this.company.room.energyAvailable;
-        this.minLoadout = 300 + (50 * this.company.extensions.length) / 1.5;
-        this.maxLoadout = 300 + (50 * this.company.extensions.length) / 1;
+        this.minLoadout = 300 + (50 * this.company.extensions.length) / 2;
+        this.maxLoadout = 300 + (50 * this.company.extensions.length) / 1.5;
         if (this.personnel.engineers.length === 0 && this.personnel.haulers.length === 0) {
             this.minLoadout = 300;
             this.maxLoadout = 300;
@@ -44,16 +44,16 @@ class CompanyS1 {
             this.recruit("sapper");
             return;
         }
-        if (this.personnel.engineers.length < this.requiredPersonnel.engineer) {
-            this.recruit("engineer");
-            return;
-        }
         if (this.personnel.haulers.length < this.requiredPersonnel.hauler) {
             this.recruit("hauler");
             return;
         }
+        if (this.personnel.engineers.length < this.requiredPersonnel.engineer) {
+            this.recruit("engineer");
+            return;
+        }
     }
-    recruit(role) {
+    recruit(role, specialJob = null) {
         // Check if we have enough energy to spawn a new Soldier
         if (this.minLoadout > this.company.room.energyAvailable) {
             return;
@@ -65,9 +65,16 @@ class CompanyS1 {
         // Recruit a new Soldier
         const newName = role + Game.time;
         const loadout = this.getLoadout(role);
-        availableSpawns[0].spawnCreep(loadout, newName, {
-            memory: { role: role, company: this.company.name },
-        });
+        if (specialJob) {
+            availableSpawns[0].spawnCreep(loadout, newName, {
+                memory: { role: role, specialJob: specialJob, company: "hhc", assignment: "build" },
+            });
+            return;
+        } else {
+            availableSpawns[0].spawnCreep(loadout, newName, {
+                memory: { role: role, company: this.company.name },
+            });
+        }
     }
     getLoadout(role) {
         let availableEnergy = this.company.room.energyAvailable;
@@ -116,7 +123,9 @@ class CompanyS1 {
                 break;
             case "sapper":
                 loadout.push(MOVE);
+                loadout.push(CARRY);
                 availableEnergy -= parts["MOVE"];
+                availableEnergy -= parts["CARRY"];
                 // harvesters mostly work, but need to replace dead ones quicker
                 for (let i = 1; availableEnergy >= parts["WORK"]; i++) {
                     if (i % 4 === 0) {

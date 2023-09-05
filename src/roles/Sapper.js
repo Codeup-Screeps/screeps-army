@@ -60,7 +60,6 @@ class Sapper extends Soldier {
 
         if (closestAvailableSource) {
             const harvestResult = this.creep.harvest(closestAvailableSource);
-
             if (harvestResult == ERR_NOT_IN_RANGE) {
                 this.creep.moveTo(closestAvailableSource, {
                     visualizePathStyle: { stroke: "#ffaa00" },
@@ -68,6 +67,14 @@ class Sapper extends Soldier {
                     reusePath: 1,
                 });
             } else if (harvestResult == OK) {
+                // add energy to any container within range 1
+                const containers = this.creep.pos.findInRange(FIND_STRUCTURES, 1, {
+                    filter: (s) => s.structureType == STRUCTURE_CONTAINER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
+                });
+                if (containers.length > 0) {
+                    const closestContainer = this.creep.pos.findClosestByPath(containers);
+                    this.creep.transfer(closestContainer, RESOURCE_ENERGY);
+                }
                 // Check if the harvester is adjacent to the source
                 if (this.creep.pos.isNearTo(closestAvailableSource.pos)) {
                     this.creep.memory.settled = true;

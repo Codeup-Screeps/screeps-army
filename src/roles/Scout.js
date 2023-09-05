@@ -26,10 +26,20 @@ class Scout extends Soldier {
 
             // Record sources
             let sources = room.find(FIND_SOURCES);
-            Memory.rooms[room.name].sources = sources.map((s) => ({
-                id: s.id,
-                pos: s.pos,
-            }));
+            Memory.rooms[room.name].sources = sources.map((s) => {
+                // get all of the positions around the source
+                const positionsAroundSource = [];
+                for (let x = s.pos.x - 1; x <= s.pos.x + 1; x++) {
+                    for (let y = s.pos.y - 1; y <= s.pos.y + 1; y++) {
+                        positionsAroundSource.push(new RoomPosition(x, y, room.name));
+                    }
+                }
+                return {
+                    id: s.id,
+                    pos: s.pos,
+                    around: positionsAroundSource,
+                };
+            });
 
             // Record minerals
             let minerals = room.find(FIND_MINERALS);
