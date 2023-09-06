@@ -14,7 +14,7 @@ class CompanyS4 {
         this.links = this.room.find(FIND_MY_STRUCTURES, { filter: (s) => s.structureType == STRUCTURE_LINK });
         this.rcl = this.room.controller.level;
         this.gcl = Game.gcl.level;
-        this.base = this.room.memory.base || "Bunker";
+        this.base = this.room.memory.base;
         this.energyPercentage = (this.room.energyAvailable / this.room.energyCapacityAvailable) * 100;
         this.constructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
     }
@@ -28,20 +28,25 @@ class CompanyS4 {
             this.transferLinks();
         }
 
-        if (!this.room.memory.bunker) {
-            this.room.memory.bunker = {};
-        }
         // build the base
-        if (this.startSpawn) {
+        if (this.startSpawn && this.room.memory.base) {
             const blueprint = new Blueprint(this.base, this.startSpawn.pos, this.room).build();
             if (Game.time % 500 === 0) {
                 blueprint.buildRoadsToSources().buildRoadsToController();
+                if (this.rcl >= 6) {
+                    blueprint.buildRoadsToMinerals();
+                    // add extractor to minerals
+                    const minerals = this.room.find(FIND_MINERALS);
+                    for (let mineral of minerals) {
+                        mineral.pos.createConstructionSite(STRUCTURE_EXTRACTOR);
+                    }
+                }
             }
         } else {
             if (!this.room.memory.base) {
                 this.determineBase();
-            } else {
-                this.placeSpawn();
+            } else if (!this.startSpawn) {
+                // this.placeSpawn();
             }
         }
         // keep container beside room controller
@@ -54,21 +59,50 @@ class CompanyS4 {
             builders: this.company.s1.personnel.engineers.filter((engineer) => engineer.creep.memory.assignment === "build"),
             upgraders: this.company.s1.personnel.engineers.filter((engineer) => engineer.creep.memory.assignment === "upgrade"),
             repairers: this.company.s1.personnel.engineers.filter((engineer) => engineer.creep.memory.assignment === "repair"),
+            miners: this.company.s1.personnel.engineers.filter((engineer) => engineer.creep.memory.assignment === "mine"),
         };
         if (unassignedEngineers.length === 0) {
             return;
         }
-        if (assignedEngineers.repairers.length < 1) {
-            unassignedEngineers[0].creep.memory.assignment = "repair";
-            return;
-        }
-        if (assignedEngineers.upgraders.length < 1) {
-            unassignedEngineers[0].creep.memory.assignment = "upgrade";
-            return;
-        }
-        if (assignedEngineers.builders.length < 1) {
-            unassignedEngineers[0].creep.memory.assignment = "build";
-            return;
+        switch (this.rcl) {
+            case 1:
+                if (assignedEngineers.upgraders.length < 1) {
+                    unassignedEngineers[0].creep.memory.assignment = "upgrade";
+                    return;
+                }
+                if (assignedEngineers.builders.length < 1) {
+                    unassignedEngineers[0].creep.memory.assignment = "build";
+                    return;
+                }
+                if (assignedEngineers.repairers.length < 1) {
+                    unassignedEngineers[0].creep.memory.assignment = "repair";
+                    return;
+                }
+                break;
+            case 2:
+                if (assignedEngineers.repairers.length < 1) {
+                    unassignedEngineers[0].creep.memory.assignment = "repair";
+                    return;
+                }
+                if (assignedEngineers.upgraders.length < 1) {
+                    unassignedEngineers[0].creep.memory.assignment = "upgrade";
+                    return;
+                }
+                if (assignedEngineers.builders.length < 1) {
+                    unassignedEngineers[0].creep.memory.assignment = "build";
+                    return;
+                }
+                break;
+            default:
+                if (assignedEngineers.builders.length < 1) {
+                    unassignedEngineers[0].creep.memory.assignment = "build";
+                    return;
+                }
+                if (assignedEngineers.upgraders.length < 1) {
+                    unassignedEngineers[0].creep.memory.assignment = "upgrade";
+                    return;
+                }
+                break;
         }
     }
     manageHaulers() {
@@ -76,36 +110,20 @@ class CompanyS4 {
         // if the hauler already has a source, leave it alone
         // otherwise, assign it to the source with the fewest haulers
         const haulers = this.company.s1.personnel.haulers;
-        haulers.forEach((hauler) => {
-            if (hauler.creep.memory.source) {
-                return;
-            }
-            // get sources that have sappers around them
-            const sources = this.room.find(FIND_SOURCES).filter((source) => {
-                const positions = [
-                    [source.pos.x - 1, source.pos.y - 1],
-                    [source.pos.x, source.pos.y - 1],
-                    [source.pos.x + 1, source.pos.y - 1],
-                    [source.pos.x - 1, source.pos.y],
-                    [source.pos.x + 1, source.pos.y],
-                    [source.pos.x - 1, source.pos.y + 1],
-                    [source.pos.x, source.pos.y + 1],
-                    [source.pos.x + 1, source.pos.y + 1],
-                ];
-                let sappers = 0;
-                for (let pos of positions) {
-                    const creepsAtPos = this.room.lookForAt(LOOK_CREEPS, pos[0], pos[1]);
-                    for (let creepAtPos of creepsAtPos) {
-                        if (creepAtPos.memory.role === "sapper") {
-                            sappers++;
-                        }
-                    }
+        const distributer = haulers.filter((hauler) => hauler.creep.memory.assignment === "distribution");
+        if (haulers.length > this.sources.length && distributer.length === 0) {
+            for (let hauler of haulers) {
+                if (!hauler.creep.memory.source) {
+                    hauler.creep.memory.assignment = "distribution";
                 }
-                return sappers > 0;
-            });
-            if (sources.length === 0) {
+            }
+        }
+        haulers.forEach((hauler) => {
+            if (hauler.creep.memory.source || hauler.creep.memory.assignment === "distribution") {
                 return;
             }
+            // get sources
+            const sources = this.room.find(FIND_SOURCES);
             // sort sources by number of haulers
             sources.sort((a, b) => {
                 const haulersAtA = haulers.filter((hauler) => hauler.creep.memory.source === a.id).length;
@@ -166,8 +184,10 @@ class CompanyS4 {
             return false;
         }
         if (receiverLinks.length > 0) {
-            if (!this.room.memory.links.receivers.includes(receiverLinks[0].id)) {
-                this.room.memory.links.receivers.push(receiverLinks[0].id);
+            for (let link of receiverLinks) {
+                if (!this.room.memory.links.receivers.includes(link.id)) {
+                    this.room.memory.links.receivers.push(link.id);
+                }
             }
         } else {
             return false;
@@ -184,11 +204,17 @@ class CompanyS4 {
         if (this.room.memory.links.receivers === undefined) {
             return;
         }
-        const senderLinks = this.room.memory.links.senders.map((id) => Game.getObjectById(id));
-        const receiverLinks = this.room.memory.links.receivers.map((id) => Game.getObjectById(id));
+        const senderLinks = this.room.memory.links.senders.map((id) => Game.getObjectById(id)).filter((link) => link);
+        let receiverLinks = this.room.memory.links.receivers.map((id) => Game.getObjectById(id)).filter((link) => link);
+        if (senderLinks.length === 0 || receiverLinks.length === 0) {
+            return;
+        }
         // if all receiverLinks are full, return
         let allFull = true;
         for (let receiverLink of receiverLinks) {
+            if (!receiverLink) {
+                continue;
+            }
             if (receiverLink.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
                 allFull = false;
             }
@@ -196,14 +222,16 @@ class CompanyS4 {
         if (allFull) {
             return;
         }
+        // sort receiverLinks by amount of energy, where the first link is the emptiest
+        receiverLinks = receiverLinks.sort((a, b) => a.store.getFreeCapacity(RESOURCE_ENERGY) - b.store.getFreeCapacity(RESOURCE_ENERGY));
         for (let senderLink of senderLinks) {
+            if (!senderLink) {
+                continue;
+            }
             if (senderLink.store[RESOURCE_ENERGY] === 0) {
                 continue;
             }
             for (let receiverLink of receiverLinks) {
-                if (receiverLink.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
-                    continue;
-                }
                 senderLink.transferEnergy(receiverLink);
             }
         }
@@ -260,30 +288,12 @@ class CompanyS4 {
         }
     }
     placeSpawn() {
-        const baseDimensions = new Blueprint(this.room.memory.base, { x: 25, y: 25 }, this.room).getDimensions();
-        // get terrain of the room
-        const terrain = Game.map.getRoomTerrain(this.room.name);
-        // find open space within base dimensions
-        let openPositions = [];
-        for (let x = 25 - baseDimensions.width / 2; x < 25 + baseDimensions.width / 2; x++) {
-            for (let y = 25 - baseDimensions.height / 2; y < 25 + baseDimensions.height / 2; y++) {
-                if (terrain.get(x, y) != TERRAIN_MASK_WALL) {
-                    openPositions.push(new RoomPosition(x, y, this.room.name));
-                }
-            }
+        // get position of a flag named "Claim"
+        const claimFlag = Game.flags["Claim"];
+        if (!claimFlag) {
+            return;
         }
-        // find open space closest to closest source
-        let closestPosition = openPositions[0];
-        let closestDistance = 50;
-        for (let position of openPositions) {
-            const distance = position.getRangeTo(this.sources[0]);
-            if (distance < closestDistance) {
-                closestPosition = position;
-                closestDistance = distance;
-            }
-        }
-        // place spawn
-        this.room.createConstructionSite(closestPosition, STRUCTURE_SPAWN);
+        this.room.createConstructionSite(claimFlag.pos.x, claimFlag.pos.y, STRUCTURE_SPAWN);
     }
 }
 

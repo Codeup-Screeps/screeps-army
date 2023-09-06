@@ -13,6 +13,16 @@ class Sapper extends Soldier {
 
         // If the harvester is settled, try to harvest without moving
         if (this.creep.memory.settled) {
+            // check if a container is within range 1
+            const containers = this.creep.pos.findInRange(FIND_STRUCTURES, 2, {
+                filter: (s) => s.structureType == STRUCTURE_CONTAINER,
+            });
+            if (containers.length > 0) {
+                // if creep isn't on top of the container, move to it
+                if (this.creep.pos.getRangeTo(containers[0]) > 0) {
+                    this.creep.moveTo(containers[0]);
+                }
+            }
             const source = this.creep.pos.findClosestByRange(FIND_SOURCES);
             const harvestResult = this.creep.harvest(source);
             if (source && harvestResult == ERR_NOT_IN_RANGE) {
@@ -63,12 +73,11 @@ class Sapper extends Soldier {
             if (harvestResult == ERR_NOT_IN_RANGE) {
                 this.creep.moveTo(closestAvailableSource, {
                     visualizePathStyle: { stroke: "#ffaa00" },
-                    //   ignoreCreeps: true,
-                    reusePath: 1,
+                    reusePath: 10,
                 });
             } else if (harvestResult == OK) {
                 // add energy to any container within range 1
-                const containers = this.creep.pos.findInRange(FIND_STRUCTURES, 1, {
+                const containers = this.creep.pos.findInRange(FIND_STRUCTURES, 2, {
                     filter: (s) => s.structureType == STRUCTURE_CONTAINER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
                 });
                 if (containers.length > 0) {

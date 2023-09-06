@@ -15,7 +15,93 @@ class Scout extends Soldier {
 
         this.explore();
     }
-    scoutRoom() {
+    explore() {
+        this.gatherIntel();
+        if (this.clearFromExit()) {
+            // at this point, closest exit is the one we just came from
+            // first get all exits
+            const exitObjects = this.creep.room.find(FIND_EXIT);
+            // then get the exit closest to the creep
+            const closestExitTile = this.creep.pos.findClosestByPath(exitObjects);
+            const closestExit = this.getExitRoomName(closestExitTile);
+            // save it to creep's memory
+            if (closestExit) {
+                this.creep.memory.previousRoom = closestExit.roomName;
+            }
+        }
+        if (this.creep.memory.targetExit) {
+            if (this.creep.memory.targetExit === this.creep.room.name) {
+                delete this.creep.memory.targetExit;
+                return;
+            }
+            const target = new RoomPosition(25, 25, this.creep.memory.targetExit);
+            const moveResult = this.creep.moveTo(target);
+            if (moveResult === ERR_NO_PATH) {
+                delete this.creep.memory.targetExit;
+            }
+            return;
+        }
+
+        // get all exits
+        const exitObjects = this.creep.room.find(FIND_EXIT);
+        const exitObjectRoomNames = exitObjects.map((e) => this.getExitRoomName(e));
+        // filter duplicates
+        let exitNames = [...new Set(exitObjectRoomNames)];
+        // console.log(`exitNames: ${exitNames}`);
+        //randomize the array
+        exitNames = exitNames.sort(() => 0.5 - Math.random());
+        // sort rooms that match any rooms in Memory.rooms to the end of the array
+        exitNames = exitNames.sort((a, b) => {
+            if (Memory.rooms[a] && Memory.rooms[a].lastScoutTime) {
+                return 1;
+            } else if (Memory.rooms[b] && Memory.rooms[b].lastScoutTime) {
+                return -1;
+            } else {
+                return 0;
+            }
+        });
+        // sort rooms that have hostile creeps to the end of the array
+        exitNames = exitNames.sort((a, b) => {
+            if (Memory.rooms[a] && Memory.rooms[a].hostiles && Memory.rooms[a].hostiles.length > 0) {
+                return 1;
+            } else if (Memory.rooms[b] && Memory.rooms[b].hostiles && Memory.rooms[b].hostiles.length > 0) {
+                return -1;
+            } else {
+                return 0;
+            }
+        });
+        // sort rooms that have hostile towers to the end of the array
+        exitNames = exitNames.sort((a, b) => {
+            if (Memory.rooms[a] && Memory.rooms[a].hostileTowers && Memory.rooms[a].hostileTowers.length > 0) {
+                return 1;
+            } else if (Memory.rooms[b] && Memory.rooms[b].hostileTowers && Memory.rooms[b].hostileTowers.length > 0) {
+                return -1;
+            } else {
+                return 0;
+            }
+        });
+        // sort any that match this.creep.memory.previousRoom to end of the array
+        exitNames = exitNames.sort((a, b) => {
+            if (a === this.creep.memory.previousRoom) {
+                return 1;
+            } else if (b === this.creep.memory.previousRoom) {
+                return -1;
+            } else {
+                return 0;
+            }
+        });
+
+        let target = new RoomPosition(25, 25, exitNames[0]);
+        let moveResult = this.creep.moveTo(target);
+        while (moveResult === ERR_NO_PATH && exitNames.length > 1) {
+            exitNames.shift();
+            target = new RoomPosition(25, 25, exitNames[0]);
+            moveResult = this.creep.moveTo(target);
+        }
+        this.creep.memory.targetExit = target.roomName;
+        return;
+    }
+    gatherIntel() {
         let room = this.creep.room;
 
         // If the room has not been scouted before or it's been a while since last scout
@@ -117,92 +203,6 @@ class Scout extends Soldier {
             }
             Memory.rooms[room.name].exits = exits;
         }
-    }
-    explore() {
-        this.scoutRoom();
-        if (this.clearFromExit()) {
-            // at this point, closest exit is the one we just came from
-            // first get all exits
-            const exitObjects = this.creep.room.find(FIND_EXIT);
-            // then get the exit closest to the creep
-            const closestExitTile = this.creep.pos.findClosestByPath(exitObjects);
-            const closestExit = this.getExitRoomName(closestExitTile);
-            // save it to creep's memory
-            if (closestExit) {
-                this.creep.memory.previousRoom = closestExit.roomName;
-            }
-        }
-        if (this.creep.memory.targetExit) {
-            if (this.creep.memory.targetExit === this.creep.room.name) {
-                delete this.creep.memory.targetExit;
-                return;
-            }
-            const target = new RoomPosition(25, 25, this.creep.memory.targetExit);
-            const moveResult = this.creep.moveTo(target);
-            if (moveResult === ERR_NO_PATH) {
-                delete this.creep.memory.targetExit;
-            }
-            return;
-        }
-
-        // get all exits
-        const exitObjects = this.creep.room.find(FIND_EXIT);
-        const exitObjectRoomNames = exitObjects.map((e) => this.getExitRoomName(e));
-        // filter duplicates
-        let exitNames = [...new Set(exitObjectRoomNames)];
-        // console.log(`exitNames: ${exitNames}`);
-        //randomize the array
-        exitNames = exitNames.sort(() => 0.5 - Math.random());
-        // sort rooms that match any rooms in Memory.rooms to the end of the array
-        exitNames = exitNames.sort((a, b) => {
-            if (Memory.rooms[a] && Memory.rooms[a].lastScoutTime) {
-                return 1;
-            } else if (Memory.rooms[b] && Memory.rooms[b].lastScoutTime) {
-                return -1;
-            } else {
-                return 0;
-            }
-        });
-        // sort rooms that have hostile creeps to the end of the array
-        exitNames = exitNames.sort((a, b) => {
-            if (Memory.rooms[a] && Memory.rooms[a].hostiles && Memory.rooms[a].hostiles.length > 0) {
-                return 1;
-            } else if (Memory.rooms[b] && Memory.rooms[b].hostiles && Memory.rooms[b].hostiles.length > 0) {
-                return -1;
-            } else {
-                return 0;
-            }
-        });
-        // sort rooms that have hostile towers to the end of the array
-        exitNames = exitNames.sort((a, b) => {
-            if (Memory.rooms[a] && Memory.rooms[a].hostileTowers && Memory.rooms[a].hostileTowers.length > 0) {
-                return 1;
-            } else if (Memory.rooms[b] && Memory.rooms[b].hostileTowers && Memory.rooms[b].hostileTowers.length > 0) {
-                return -1;
-            } else {
-                return 0;
-            }
-        });
-        // sort any that match this.creep.memory.previousRoom to end of the array
-        exitNames = exitNames.sort((a, b) => {
-            if (a === this.creep.memory.previousRoom) {
-                return 1;
-            } else if (b === this.creep.memory.previousRoom) {
-                return -1;
-            } else {
-                return 0;
-            }
-        });
-
-        let target = new RoomPosition(25, 25, exitNames[0]);
-        let moveResult = this.creep.moveTo(target);
-        while (moveResult === ERR_NO_PATH && exitNames.length > 1) {
-            exitNames.shift();
-            target = new RoomPosition(25, 25, exitNames[0]);
-            moveResult = this.creep.moveTo(target);
-        }
-        this.creep.memory.targetExit = target.roomName;
-        return;
     }
     getExitRoomName(exitTile) {
         // Get all neighboring rooms from the current room

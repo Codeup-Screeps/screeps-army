@@ -8,6 +8,14 @@ const clearMemory = () => {
             // console.log("Clearing non-existing creep memory:", creepName);
         }
     }
+    // Alpabetically order Memory.rooms object
+    const orderedRooms = {};
+    Object.keys(Memory.rooms)
+        .sort()
+        .forEach(function (key) {
+            orderedRooms[key] = Memory.rooms[key];
+        });
+    Memory.rooms = orderedRooms;
 };
 
 export default clearMemory;

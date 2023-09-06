@@ -38,16 +38,23 @@ class Engineer extends Soldier {
             if (this.build()) {
                 return;
             }
-            if (this.resupplyExtensions()) {
-                return;
-            }
-            if (this.resupplyTowers()) {
-                return;
+            // if no haulers
+            const haulers = this.creep.room.find(FIND_MY_CREEPS, {
+                filter: (creep) => creep.memory.role == "hauler",
+            });
+            if (haulers.length === 0) {
+                if (this.resupplyExtensions()) {
+                    return;
+                }
+                if (this.resupplyTowers()) {
+                    return;
+                }
             }
             this.upgradeRC();
         }
         if (this.creep.memory.assignment === "upgrade") {
-            this.upgradeRC();
+            this.upgrade();
+            return;
         }
         if (this.creep.memory.assignment === "repair") {
             if (this.repair()) {
@@ -125,6 +132,27 @@ class Engineer extends Soldier {
             this.collectSource();
             return;
         }
+        if (this.creep.memory.assignment === "upgrade") {
+            if (this.creep.memory.settled) {
+                // get links within range 1
+                const links = this.creep.pos.findInRange(FIND_STRUCTURES, 1, {
+                    filter: (s) => s.structureType == STRUCTURE_LINK,
+                });
+                // collect from links
+                if (links.length > 0) {
+                    for (let link of links) {
+                        if (link.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+                            this.creep.withdraw(link, RESOURCE_ENERGY);
+                            return;
+                        }
+                    }
+                }
+                return;
+            }
+            if (this.collectLink()) {
+                return;
+            }
+        }
         if (this.collectGround()) {
             return;
         }
@@ -171,6 +199,17 @@ class Engineer extends Soldier {
             // No structures to repair, so consider other tasks or stay idle
             // e.g., creep.moveTo(Game.flags["IdleFlag"]);
             return false;
+        }
+    }
+    upgrade() {
+        this.upgradeRC();
+        // if this creep is within range of the controller, and within collect range of a link, set it settled
+        const controller = this.creep.room.controller;
+        const link = this.creep.pos.findInRange(FIND_STRUCTURES, 1, {
+            filter: (s) => s.structureType == STRUCTURE_LINK,
+        });
+        if (controller && link.length > 0) {
+            this.creep.memory.settled = true;
         }
     }
 }

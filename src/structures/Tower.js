@@ -20,7 +20,7 @@ class Tower {
         }
         // repair targets within range of tower
         const structureTargets = this.tower.room.find(FIND_STRUCTURES, {
-            filter: (structure) => structure.hits < structure.hitsMax && structure.hits < 150000 && structure.pos.getRangeTo(this.tower) < 20,
+            filter: (structure) => structure.hits < structure.hitsMax && structure.hits < 200000,
         });
 
         // sort by hits

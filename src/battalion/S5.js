@@ -36,6 +36,9 @@ class BattalionS5 {
             Memory.nextClaim = nextRoom;
             return;
         }
+        if (!surroundingRooms) {
+            return;
+        }
         for (let room of surroundingRooms) {
             const sources = Memory.rooms[room].sources;
             // TODO: programatically determine if a room is worth claiming

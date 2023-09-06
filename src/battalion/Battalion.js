@@ -1,5 +1,5 @@
 import Company from "../company/Company";
-import { Engineer, Hauler, Infantryman, Medic, Rifleman, Sapper, Scout } from "../roles/index";
+import { Engineer, Hauler, Infantryman, Medic, Rifleman, Sapper, Scout, Miner } from "../roles/index";
 import { HHC, BattalionS1, BattalionS2, BattalionS3, BattalionS4, BattalionS5, BattalionS6 } from "./index";
 
 class Battalion {
@@ -55,6 +55,8 @@ class Battalion {
                 return new Sapper(creep);
             case "scout":
                 return new Scout(creep);
+            case "miner":
+                return new Miner(creep);
             default:
                 return new Infantryman(creep);
         }

@@ -5,6 +5,7 @@ class CompanyS1 {
     constructor(company) {
         this.company = company;
         this.name = "S1";
+        this.rcl = this.company.room.controller.level;
         this.sources = this.company.sources;
         this.personnel = {
             engineers: this.company.soldiers.filter((soldier) => soldier.creep.memory.role === "engineer"),
@@ -14,15 +15,28 @@ class CompanyS1 {
             riflemen: this.company.soldiers.filter((soldier) => soldier.creep.memory.role === "rifleman"),
             sappers: this.company.soldiers.filter((soldier) => soldier.creep.memory.role === "sapper"),
             scouts: this.company.soldiers.filter((soldier) => soldier.creep.memory.role === "scout"),
+            miners: this.company.soldiers.filter((soldier) => soldier.creep.memory.role === "miner"),
         };
-        this.requiredPersonnel = {
-            engineer: 2 + this.sources.length,
-            hauler: this.sources.length,
-            sapper: this.sources.length,
-        };
+        if (this.rcl < 3) {
+            this.requiredPersonnel = {
+                engineer: 1 + this.sources.length,
+                hauler: this.sources.length,
+                sapper: this.sources.length,
+            };
+        } else {
+            this.requiredPersonnel = {
+                engineer: 2,
+                hauler: this.sources.length + 1,
+                sapper: this.sources.length,
+            };
+        }
         this.energyAvailable = this.company.room.energyAvailable;
         this.minLoadout = 300 + (50 * this.company.extensions.length) / 2;
         this.maxLoadout = 300 + (50 * this.company.extensions.length) / 1.5;
+        if (this.minLoadout > 1000 || this.maxLoadout > 1000) {
+            this.minLoadout = 1000;
+            this.maxLoadout = 1000;
+        }
         if (this.personnel.engineers.length === 0 && this.personnel.haulers.length === 0) {
             this.minLoadout = 300;
             this.maxLoadout = 300;
@@ -50,6 +64,10 @@ class CompanyS1 {
         }
         if (this.personnel.engineers.length < this.requiredPersonnel.engineer) {
             this.recruit("engineer");
+            return;
+        }
+        if (this.rcl > 5 && this.personnel.miners < 1) {
+            this.recruit("miner");
             return;
         }
     }
@@ -138,6 +156,16 @@ class CompanyS1 {
                 }
                 break;
             case "scout":
+                break;
+            case "miner":
+                loadout.push(WORK, CARRY, MOVE);
+                availableEnergy -= parts["WORK"] + parts["CARRY"] + parts["MOVE"];
+                while (availableEnergy >= parts["WORK"] + parts["CARRY"] + parts["MOVE"]) {
+                    loadout.unshift(WORK);
+                    loadout.push(CARRY);
+                    loadout.push(MOVE);
+                    availableEnergy -= parts["WORK"] + parts["CARRY"] + parts["MOVE"];
+                }
                 break;
             default:
                 break;

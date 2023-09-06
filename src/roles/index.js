@@ -5,3 +5,5 @@ export { default as Rifleman } from "./Rifleman";
 export { default as Medic } from "./Medic";
 export { default as Sapper } from "./Sapper";
 export { default as Scout } from "./Scout";
+export { default as Claimer } from "./Claimer";
+export { default as Miner } from "./Miner";

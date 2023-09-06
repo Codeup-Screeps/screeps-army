@@ -1,7 +1,7 @@
 import { SmallFOB, Bunker } from "./index";
 
 class Blueprint {
-    // Blueprints built using Screeps Building Planner: https://screeps.arcath.net/building-planner
+    // Blueprints built using Screeps Building Planner: https://screepers.github.io/screeps-tools/#/building-planner
     constructor(type, pos, room) {
         if (!type) throw new Error("Blueprint type not specified");
         if (!pos) throw new Error("Blueprint position not specified");
@@ -80,7 +80,9 @@ class Blueprint {
     }
     buildRoadsToSources() {
         // build roads to sources
-        const sources = this.room.find(FIND_SOURCES);
+        const sources = _.map(this.room.find(FIND_SOURCES), (source) => {
+            return { pos: source.pos, range: 1 };
+        });
         const roadConnectors = this.blueprint.roadConnectPoints.pos.map((pos) => new RoomPosition(pos.x, pos.y, this.room.name));
         for (let source of sources) {
             const path = this.determineBestPath(roadConnectors, source);
@@ -96,16 +98,32 @@ class Blueprint {
         this.buildRoadAlongPath(path);
         return this;
     }
+    buildRoadsToMinerals() {
+        // build roads to minerals
+        const minerals = _.map(this.room.find(FIND_MINERALS), (mineral) => {
+            return { pos: mineral.pos, range: 1 };
+        });
+        const roadConnectors = this.blueprint.roadConnectPoints.pos.map((pos) => new RoomPosition(pos.x, pos.y, this.room.name));
+        for (let mineral of minerals) {
+            const path = this.determineBestPath(roadConnectors, mineral);
+            this.buildRoadAlongPath(path);
+        }
+        return this;
+    }
     determineBestPath(pointsArr, destination) {
         // find the bunker exit with least cost from the PathFinder object
-        let bestPath = pointsArr.reduce((min, exit) => {
-            let path = PathFinder.search(exit, destination, { plainCost: 2, swampCost: 3 });
-            if (path.cost < min.cost) {
-                return path;
-            } else {
-                return min;
-            }
-        }, PathFinder.search(pointsArr[0], destination, { plainCost: 2, swampCost: 3 }));
+        let bestPath = pointsArr.reduce(
+            (min, exit) => {
+                let path = PathFinder.search(exit, destination, { plainCost: 2, swampCost: 2 });
+                if (path.cost < min.cost) {
+                    return path;
+                } else {
+                    return min;
+                }
+            },
+            { cost: 1000 }
+        );
+        if (!bestPath) console.log("No best path found");
         return bestPath;
     }
     buildRoadAlongPath(path) {
