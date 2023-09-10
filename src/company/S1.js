@@ -67,7 +67,17 @@ class CompanyS1 {
             return;
         }
         if (this.rcl > 5 && this.personnel.miners < 1) {
-            this.recruit("miner");
+            // get mineral deposits
+            const minerals = this.company.room.find(FIND_MINERALS);
+            let hasMinerals = false;
+            for (let mineral of minerals) {
+                if (mineral.mineralAmount > 0) {
+                    hasMinerals = true;
+                }
+            }
+            if (hasMinerals) {
+                this.recruit("miner");
+            }
             return;
         }
     }

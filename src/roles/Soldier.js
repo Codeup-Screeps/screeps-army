@@ -82,12 +82,12 @@ class Soldier {
         }
     }
     resupplyContainer() {
-        const containers = this.creep.room.find(FIND_STRUCTURES, {
+        let containers = this.creep.room.find(FIND_STRUCTURES, {
             filter: (s) => s.structureType == STRUCTURE_CONTAINER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
         });
-        //filter only to containers that are near sources
+        // filter out source containers
         const sources = this.creep.room.find(FIND_SOURCES);
-        const containersAwayFromSources = containers.filter((container) => {
+        containers = containers.filter((container) => {
             for (let source of sources) {
                 if (container.pos.getRangeTo(source) < 3) {
                     return false;
@@ -95,9 +95,20 @@ class Soldier {
             }
             return true;
         });
-        const containersWithRoom = containersAwayFromSources.filter((container) => container.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
-        if (containersWithRoom.length > 0) {
-            const closestContainer = this.creep.pos.findClosestByPath(containersWithRoom);
+        //filter out containers near minerals
+        const minerals = this.creep.room.find(FIND_MINERALS);
+        containers = containers.filter((container) => {
+            for (let mineral of minerals) {
+                if (container.pos.getRangeTo(mineral) < 3) {
+                    return false;
+                }
+            }
+            return true;
+        });
+        //filter out containers that are full
+        containers = containers.filter((container) => container.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
+        if (containers.length > 0) {
+            const closestContainer = this.creep.pos.findClosestByPath(containers);
             if (this.creep.transfer(closestContainer, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                 this.creep.moveTo(closestContainer);
                 return true; // Exit early if we're moving to a container or storage
@@ -250,7 +261,7 @@ class Soldier {
             // console.log(`${this.creep.name} found ${links.length} links`);
             const closestLink = this.creep.pos.findClosestByPath(links);
             // if link is further than 8 tiles away, then don't collect from it
-            if (this.creep.pos.getRangeTo(closestLink) > 8 && this.creep.memory.assignment !== "upgrade") {
+            if (this.creep.pos.getRangeTo(closestLink) > 5 && this.creep.memory.assignment !== "upgrade") {
                 return false;
             }
             if (this.creep.withdraw(closestLink, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {

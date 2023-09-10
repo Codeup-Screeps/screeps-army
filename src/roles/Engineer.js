@@ -152,6 +152,9 @@ class Engineer extends Soldier {
             if (this.collectLink()) {
                 return;
             }
+            if (this.collectContainer()) {
+                return;
+            }
         }
         if (this.collectGround()) {
             return;
@@ -208,7 +211,10 @@ class Engineer extends Soldier {
         const link = this.creep.pos.findInRange(FIND_STRUCTURES, 1, {
             filter: (s) => s.structureType == STRUCTURE_LINK,
         });
-        if (controller && link.length > 0) {
+        // if link[0] is included in room.memory.links.receivers, then this is a receiver link
+        const receiverLinks = this.creep.room.memory.links && this.creep.room.memory.links.receivers ? this.creep.room.memory.links.receivers : [];
+        const isReceiverLink = receiverLinks.filter((link) => link.id === link[0].id).length > 0;
+        if (controller && isReceiverLink) {
             this.creep.memory.settled = true;
         }
     }
