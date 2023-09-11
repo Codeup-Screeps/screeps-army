@@ -37,6 +37,13 @@ class Hauler extends Soldier {
         }
     }
     haul() {
+        // if hostile creeps in the room, prioritize towers
+        const hostiles = this.creep.room.find(FIND_HOSTILE_CREEPS);
+        if (hostiles.length > 0) {
+            if (this.resupplyTowers()) {
+                return;
+            }
+        }
         const distributerActive =
             this.creep.room.find(FIND_MY_CREEPS, {
                 filter: (creep) => creep.memory.assignment == "distribution",
@@ -151,7 +158,8 @@ class Hauler extends Soldier {
         // check storage or containers within range 10 of spawn
         const spawn = this.creep.pos.findClosestByRange(FIND_MY_SPAWNS);
         const energyContainers = spawn.pos.findInRange(FIND_STRUCTURES, 8, {
-            filter: (s) => (s.structureType == STRUCTURE_CONTAINER || s.structureType == STRUCTURE_STORAGE) && s.store.getUsedCapacity(RESOURCE_ENERGY) > 0,
+            filter: (s) =>
+                (s.structureType == STRUCTURE_CONTAINER || s.structureType == STRUCTURE_STORAGE) && s.store.getUsedCapacity(RESOURCE_ENERGY) > 0,
         });
         if (senderLinks.length > 0 && energyContainers.length > 0) {
             if (distributerActive && this.creep.memory.assignment !== "distribution") {

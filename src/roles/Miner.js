@@ -41,6 +41,25 @@ class Miner extends Soldier {
         if (extractors.length === 0) {
             return;
         }
+        // const containersNearExtractor = this.creep.room.find(FIND_STRUCTURES, {
+        //     filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && structure.pos.inRangeTo(extractors[0], 1),
+        // });
+        // if (containersNearExtractor.length > 0) {
+        //     // if container has anything
+        //     if (containersNearExtractor[0].store.getUsedCapacity() > 0) {
+        //         if (
+        //             this.creep.withdraw(
+        //                 containersNearExtractor[0],
+        //                 containersNearExtractor[0].store.getUsedCapacity(Object.keys(this.creep.store)[0])
+        //             ) == ERR_NOT_IN_RANGE
+        //         ) {
+        //             this.creep.moveTo(containersNearExtractor[0]);
+        //             return;
+        //         }
+        //         return;
+        //     }
+        // }
+
         const extractor = extractors[0];
         const minerals = this.creep.room.find(FIND_MINERALS);
         if (minerals.length === 0) {

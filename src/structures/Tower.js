@@ -26,7 +26,7 @@ class Tower {
             filter: (structure) => structure.hits < structure.hitsMax && structure.hits < 200000,
         });
         // if abundant energy, repair ramparts/walls fully
-        if (this.storageEnergy > 80000) {
+        if (this.storageEnergy > 100000) {
             structureTargets = this.tower.room.find(FIND_STRUCTURES, {
                 filter: (structure) => structure.hits < structure.hitsMax,
             });

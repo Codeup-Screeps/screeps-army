@@ -53,6 +53,16 @@ class CompanyS4 {
         // this.roomControllerContainer();
         // manage spawn energy
     }
+    report(type) {
+        switch (type) {
+            case "minerals":
+                // return all minerals in storage
+                const storage = this.room.storage;
+                const minerals = storage.store.filter((resource) => resource !== RESOURCE_ENERGY);
+                return minerals;
+                break;
+        }
+    }
     manageEngineers() {
         let unassignedEngineers = this.company.s1.personnel.engineers.filter((engineer) => engineer.creep.memory.assignment === undefined);
         let assignedEngineers = {
@@ -84,6 +94,18 @@ class CompanyS4 {
                     unassignedEngineers[0].creep.memory.assignment = "repair";
                     return;
                 }
+                if (assignedEngineers.upgraders.length < 1) {
+                    unassignedEngineers[0].creep.memory.assignment = "upgrade";
+                    return;
+                }
+                if (assignedEngineers.builders.length < 1) {
+                    unassignedEngineers[0].creep.memory.assignment = "build";
+                    return;
+                }
+                break;
+            case 6:
+            case 7:
+            case 8:
                 if (assignedEngineers.upgraders.length < 1) {
                     unassignedEngineers[0].creep.memory.assignment = "upgrade";
                     return;

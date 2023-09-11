@@ -62,9 +62,23 @@ class CompanyS1 {
             this.recruit("hauler");
             return;
         }
-        if (this.personnel.engineers.length < this.requiredPersonnel.engineer) {
-            this.recruit("engineer");
-            return;
+        // get constructions sites
+        const constructionSites = this.company.room.find(FIND_CONSTRUCTION_SITES);
+        if (this.rcl >= 5 && constructionSites.length > 0) {
+            if (this.personnel.engineers.length < this.requiredPersonnel.engineer) {
+                this.recruit("engineer");
+                return;
+            }
+        } else if (this.rcl < 5) {
+            if (this.personnel.engineers.length < this.requiredPersonnel.engineer) {
+                this.recruit("engineer");
+                return;
+            }
+        } else {
+            if (this.personnel.engineers.length < 1) {
+                this.recruit("engineer");
+                return;
+            }
         }
         if (this.rcl > 5 && this.personnel.miners < 1) {
             // get mineral deposits
