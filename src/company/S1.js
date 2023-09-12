@@ -123,6 +123,9 @@ class CompanyS1 {
         if (role === "sapper" && availableEnergy > 750) {
             this.maxLoadout = 750;
         }
+        if (role === "hauler") {
+            this.maxLoadout = 300 + (50 * this.company.extensions.length) / 1.5;
+        }
         if (availableEnergy > this.maxLoadout) {
             availableEnergy = this.maxLoadout;
         }

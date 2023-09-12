@@ -44,11 +44,6 @@ class Hauler extends Soldier {
                 return;
             }
         }
-        if (this.creep.memory.assignment === "distribution") {
-            if (this.fillTransferOrder()) {
-                return;
-            }
-        }
         const distributerActive =
             this.creep.room.find(FIND_MY_CREEPS, {
                 filter: (creep) => creep.memory.assignment == "distribution",
@@ -71,8 +66,17 @@ class Hauler extends Soldier {
                 }
             }
         }
-
-        if (!distributerActive || this.creep.memory.assignment === "distribution") {
+        let distributerBusy = false;
+        if (!distributerActive) {
+            if (this.creep.room.memory.orders !== undefined) {
+                if (this.creep.room.memory.orders.length > 0) {
+                    if (this.creep.room.memory.orders[0].status === "open") {
+                        distributerBusy = true;
+                    }
+                }
+            }
+        }
+        if (!distributerActive || this.creep.memory.assignment === "distribution" || distributerBusy) {
             // if creep resource is not energy
             if (Object.keys(this.creep.store)[0] !== RESOURCE_ENERGY) {
                 if (this.resupplyStorage()) {
@@ -84,6 +88,11 @@ class Hauler extends Soldier {
             }
             if (this.resupplyExtensions()) {
                 return;
+            }
+            if (this.creep.memory.assignment === "distribution") {
+                if (this.fillTransferOrder()) {
+                    return;
+                }
             }
             if (this.resupplyTowers()) {
                 return;
@@ -208,9 +217,10 @@ class Hauler extends Soldier {
         const terminal = this.creep.room.terminal;
         let terminalEnergyFilled = false;
         let terminalResourceFilled = false;
-        // if order.resourceType is energy
-        if (order.resourceType === RESOURCE_ENERGY) {
+        // if order.resource is energy
+        if (order.resource === RESOURCE_ENERGY) {
             if (terminal.store.getUsedCapacity(RESOURCE_ENERGY) >= order.amount + order.transferCost) {
+                console.log(`Terminal energy filled for ${order.amount + order.transferCost} energy.`);
                 terminalEnergyFilled = true;
                 terminalResourceFilled = true;
             }
@@ -218,20 +228,21 @@ class Hauler extends Soldier {
             if (terminal.store.getUsedCapacity(RESOURCE_ENERGY) >= order.transferCost) {
                 terminalEnergyFilled = true;
             }
-            if (terminal.store.getUsedCapacity(order.resourceType) >= order.amount) {
+            if (terminal.store.getUsedCapacity(order.resource) >= order.amount) {
                 terminalResourceFilled = true;
             }
         }
         if (!terminalEnergyFilled) {
             this.creep.memory.collect = RESOURCE_ENERGY;
         } else if (!terminalResourceFilled) {
-            this.creep.memory.collect = order.resourceType;
+            this.creep.memory.collect = order.resource;
         } else {
             this.creep.memory.collect = undefined;
+            console.log(`${this.creep.room.name} Co. Distributer: Order ${order.id} filled.`);
             this.creep.room.memory.orders[0].status = "filled";
             return;
         }
-        if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0 || this.creep.store.getUsedCapacity(order.resourceType) > 0) {
+        if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0 || this.creep.store.getUsedCapacity(order.resource) > 0) {
             this.resupplyTerminal();
             return true;
         }
@@ -246,6 +257,9 @@ class Hauler extends Soldier {
             return false;
         }
         if (this.creep.room.terminal.store.getUsedCapacity(terminalResources[0]) === 0) {
+            return false;
+        }
+        if (this.creep.room.memory.orders !== undefined && this.creep.room.memory.orders.length > 0) {
             return false;
         }
         const withdrawResult = this.creep.withdraw(this.creep.room.terminal, terminalResources[0]);

@@ -6,9 +6,7 @@ class Claimer extends Soldier {
         this.creep = creep;
     }
     run() {
-        if (this.creep.memory.targetRoom === undefined) {
-            this.creep.memory.targetRoom = Memory.nextClaim;
-        }
+        this.creep.memory.targetRoom = Memory.nextClaim;
         if (this.creep.room.name !== this.creep.memory.targetRoom) {
             this.creep.moveTo(new RoomPosition(25, 25, this.creep.memory.targetRoom));
         } else {

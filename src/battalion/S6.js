@@ -49,9 +49,7 @@ class BattalionS6 {
                 if (!roomEnergyStorage > energyCost) {
                     return;
                 }
-                const roomMineralStorage = room.find(FIND_MY_STRUCTURES, {
-                    filter: (structure) => structure.structureType === STRUCTURE_STORAGE,
-                })[0].store[order.resourceType];
+                const roomMineralStorage = Game.rooms[room.name].storage ? Game.rooms[room.name].storage.store[order.resourceType] : 0;
                 if (!roomMineralStorage > order.remainingAmount) {
                     return;
                 }

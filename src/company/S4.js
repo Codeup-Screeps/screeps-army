@@ -46,11 +46,6 @@ class CompanyS4 {
                 }
             }
         } else {
-            if (!this.room.memory.base) {
-                this.determineBase();
-            } else if (!this.startSpawn) {
-                // this.placeSpawn();
-            }
         }
         this.evaluateResourcesToTransfer();
     }
@@ -278,13 +273,6 @@ class CompanyS4 {
             this.room.createConstructionSite(sapperPos.x, sapperPos.y, STRUCTURE_CONTAINER);
         }
     }
-    determineBase() {
-        if (this.sources.length == 1) {
-            this.room.memory.base = "SmallFOB";
-        } else if (this.sources.length == 2) {
-            this.room.memory.base = "Bunker";
-        }
-    }
     placeSpawn() {
         // get position of a flag named "Claim"
         const claimFlag = Game.flags["Claim"];
@@ -325,6 +313,7 @@ class CompanyS4 {
                 },
                 { room: null, distance: 100 }
             );
+            // console.log(`Closest bunker room is ${closestBunkerRoom.room.name}.`);
             if (closestBunkerRoom.room === null) {
                 return;
             }
@@ -337,7 +326,7 @@ class CompanyS4 {
             if (Memory.rooms[this.room.name].orders.filter((order) => order.type === "transfer").length > 0) {
                 return;
             }
-            Memory.rooms[this.room.name].orders.push({
+            const newOrder = {
                 id: `transfer-${Game.time}`,
                 type: "transfer",
                 resource: RESOURCE_ENERGY,
@@ -345,7 +334,9 @@ class CompanyS4 {
                 transferCost: transferCost,
                 target: closestBunkerRoom.room.name,
                 status: "open",
-            });
+            };
+            console.log(`${this.room} Co. S4: Adding new order - ${JSON.stringify(newOrder)}`);
+            Memory.rooms[this.room.name].orders.push(newOrder);
         }
     }
 }

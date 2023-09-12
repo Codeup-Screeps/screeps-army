@@ -56,42 +56,70 @@ class BattalionS4 {
     sendBuilders() {
         // if there is a room with a spawn construction site
         const spawnConstructionSites = Object.values(Game.constructionSites).filter((site) => site.structureType === STRUCTURE_SPAWN);
+        // console.log(JSON.stringify(spawnConstructionSites));
         if (spawnConstructionSites.length > 0) {
             // check if room has a builder
+            // console.log("Construction sites => ", JSON.stringify(spawnConstructionSites[0]));
             const builders = Object.values(Game.creeps).filter(
                 (creep) => creep.memory.role === "engineer" && creep.memory.specialJob === spawnConstructionSites[0].id
             );
             // console.log(`Found ${builders.length} special builders`);
             if (builders.length === 0) {
+                // console.log(`${spawnConstructionSites[0].room.name} needs a builder.`);
                 // if not, get all the bunkers
-                const bunkerRooms = this.battalion.rooms.find((room) => room.memory.type === "bunker");
-                if (!bunkerRooms) {
+                // Memory.rooms is an object
+                let bunkerRooms = [];
+                for (const room in Memory.rooms) {
+                    if (Memory.rooms[room].name === spawnConstructionSites[0].pos.roomName) {
+                        continue;
+                    }
+                    if (Memory.rooms[room].base === "Bunker") {
+                        bunkerRooms.push(room);
+                    }
+                }
+                if (bunkerRooms.length === 0) {
+                    if (Game.time % 50 === 0) {
+                        console.log(`No bunker rooms found.`);
+                    }
                     return;
                 }
-                const closestBunkerRoom = this.battalion.rooms.reduce(
+                // console.log(`Bunker rooms:`);
+                // console.log(JSON.stringify(bunkerRooms));
+                const closestBunkerRoom = bunkerRooms.reduce(
                     (accumulator, room) => {
-                        if (room.memory.type === "bunker") {
-                            const distance = Game.map.getRoomLinearDistance(room.name, spawnConstructionSites[0].room.name);
-                            if (distance < accumulator.distance) {
-                                accumulator = {
-                                    room,
-                                    distance,
-                                };
-                            }
+                        console.log("Room => ", JSON.stringify(room));
+                        if (room === spawnConstructionSites[0].pos.roomName) {
+                            return accumulator;
+                        }
+                        const distance = Game.map.getRoomLinearDistance(room, spawnConstructionSites[0].pos.roomName);
+                        if (distance < accumulator.distance) {
+                            accumulator = {
+                                room,
+                                distance,
+                            };
                         }
                         return accumulator;
                     },
                     { room: null, distance: 100 }
                 );
-                const availableSpawns = closestBunkerRoom.room.find(FIND_MY_STRUCTURES, {
+                if (closestBunkerRoom.room === null) {
+                    console.log(`No closest bunker room found.`);
+                    return;
+                }
+                console.log(`Closest bunker room is ${closestBunkerRoom.room}.`);
+                const availableSpawns = Game.rooms[closestBunkerRoom.room].find(FIND_MY_STRUCTURES, {
                     filter: (structure) => structure.structureType === STRUCTURE_SPAWN,
                 });
                 if (availableSpawns.length === 0) {
+                    if (Game.time % 50 === 0) {
+                        console.log(`No available spawns found.`);
+                    }
                     return;
                 }
                 if (availableSpawns[0].room.energyAvailable < 300) {
                     return;
                 }
+                // console.log(`Recruiting a new Builder in ${availableSpawns[0]} to build a spawn in ${spawnConstructionSites[0].room.name}`);
                 // Recruit a new Engineer
                 this.battalion.companies
                     .find((company) => company.name === availableSpawns[0].room.name)

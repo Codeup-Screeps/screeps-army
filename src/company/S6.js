@@ -13,14 +13,18 @@ class CompanyS6 {
             const filledOrder = orders.find((order) => order.status === "filled");
             if (filledOrder) {
                 const terminal = this.room.terminal;
+                // console.log(`Terminal: ${terminal}`);
                 if (terminal) {
                     const amount = filledOrder.amount;
                     const resource = filledOrder.resource;
                     const result = terminal.send(resource, amount, filledOrder.target);
-                    console.log(`${this.room.name} Company S6 sending ${amount} ${resource} to ${filledOrder.target}.`);
                     // console.log(result);
-                    if (result === OK) {
+                    if (result === 0) {
+                        console.log(`Company S6: ${this.room.name} Company S6 sending ${amount} ${resource} to ${filledOrder.target}.`);
                         filledOrder.status = "sent";
+                        // delete filledOrder;
+                        console.log(`Company S6: Order ${filledOrder.id} removed`);
+                        this.room.memory.orders = [];
                     }
                 }
             }

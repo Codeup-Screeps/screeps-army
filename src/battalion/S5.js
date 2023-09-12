@@ -27,21 +27,29 @@ class BattalionS5 {
             Memory.nextClaim = null;
             return;
         }
-        const surroundingRooms = Memory.surroundingRooms;
         let nextRoom = null;
         // if there's a flag called "Claim" in a room, that's the next room to claim
-        const claimFlags = Object.values(Game.flags).filter((flag) => flag.name === "Claim");
+        const claimFlags = Object.values(Game.flags).filter((flag) => flag.name.includes("Claim"));
         if (claimFlags.length > 0) {
             nextRoom = claimFlags[0].pos.roomName;
+            if (nextRoom.includes("_")) {
+                nextRoom = nextRoom.split("_")[0];
+            }
+            if (nextRoom.includes("-")) {
+                nextRoom = nextRoom.split("-")[0];
+            }
             Memory.nextClaim = nextRoom;
+            // get name
+            let baseType = claimFlags[0].name.split("-")[1];
+            if (baseType) {
+                Memory.rooms[nextRoom].base = baseType;
+            } else {
+                baseType = claimFlags[0].name.split("_")[1];
+                if (baseType) {
+                    Memory.rooms[nextRoom].base = baseType;
+                }
+            }
             return;
-        }
-        if (!surroundingRooms) {
-            return;
-        }
-        for (let room of surroundingRooms) {
-            const sources = Memory.rooms[room].sources;
-            // TODO: programatically determine if a room is worth claiming
         }
     }
     getSurroundingRooms() {
