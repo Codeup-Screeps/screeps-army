@@ -124,7 +124,9 @@ class Soldier {
         });
         if (storage.length > 0) {
             const closestStorage = this.creep.pos.findClosestByPath(storage);
-            if (this.creep.transfer(closestStorage, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+            // whatever creep has in store
+            const resource = Object.keys(this.creep.store)[0];
+            if (this.creep.transfer(closestStorage, resource) === ERR_NOT_IN_RANGE) {
                 this.creep.moveTo(closestStorage);
                 return true; // Exit early if we're moving to a container or storage
             }

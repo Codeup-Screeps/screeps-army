@@ -16,6 +16,9 @@ class CompanyS4 {
         this.gcl = Game.gcl.level;
         this.base = this.room.memory.base;
         this.energyPercentage = (this.room.energyAvailable / this.room.energyCapacityAvailable) * 100;
+        this.hasStorage = this.room.storage ? true : false;
+        this.hasTerminal = this.room.terminal ? true : false;
+        this.energyInStorage = this.room.storage ? this.room.storage.store[RESOURCE_ENERGY] : 0;
         this.constructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
     }
     run() {
@@ -49,9 +52,7 @@ class CompanyS4 {
                 // this.placeSpawn();
             }
         }
-        // keep container beside room controller
-        // this.roomControllerContainer();
-        // manage spawn energy
+        this.evaluateResourcesToTransfer();
     }
     report(type) {
         switch (type) {
@@ -258,31 +259,6 @@ class CompanyS4 {
             }
         }
     }
-    roomControllerContainer() {
-        // save cpu by only running this every 1000 ticks
-        if (Game.time % 1000 === 0 && this.rcl >= 2) {
-            // keep container beside room controller
-            if (!this.room.controller) {
-                return;
-            }
-            if (this.room.controller.pos.findInRange(FIND_STRUCTURES, 6, { filter: (s) => s.structureType == STRUCTURE_CONTAINER }).length > 0) {
-                return;
-            }
-            // find open space beside controller. requirements: within 3 spaces of controller, not on a wall, not on a road
-            const roadPos = this.room.controller.pos.findInRange(FIND_STRUCTURES, 4, {
-                filter: (s) => s.structureType == STRUCTURE_ROAD,
-            });
-            // find an open plain or swamp tile beside roadPos
-            const openPositions = this.room
-                .lookForAtArea(LOOK_TERRAIN, roadPos[0].pos.y - 1, roadPos[0].pos.x - 1, roadPos[0].pos.y + 1, roadPos[0].pos.x + 1, true)
-                .filter((t) => t.terrain != "wall" && t.terrain != "road");
-            if (openPositions.length === 0) {
-                return;
-            }
-            // create container
-            this.room.createConstructionSite(openPositions[0].x, openPositions[0].y, STRUCTURE_CONTAINER);
-        }
-    }
     sourceContainers() {
         // find sources without containers and build them
         const sources = this.room.find(FIND_SOURCES);
@@ -316,6 +292,61 @@ class CompanyS4 {
             return;
         }
         this.room.createConstructionSite(claimFlag.pos.x, claimFlag.pos.y, STRUCTURE_SPAWN);
+    }
+    evaluateResourcesToTransfer() {
+        if (
+            this.base === "SmallFOB" &&
+            this.hasTerminal &&
+            this.hasStorage &&
+            this.constructionSites.length === 0 &&
+            this.energyInStorage >= 100000
+        ) {
+            // get the closest room with a bunker base
+            const bunkerRooms = this.company.battalion.rooms.filter((room) => Game.rooms[room.name].memory.base === "Bunker");
+            // console.log(JSON.stringify(bunkerRooms));
+            if (!bunkerRooms) {
+                return;
+            }
+            const closestBunkerRoom = this.company.battalion.rooms.reduce(
+                (accumulator, room) => {
+                    if (room.memory.base === "Bunker") {
+                        if (this.room.name === room.name) {
+                            return accumulator;
+                        }
+                        const distance = Game.map.getRoomLinearDistance(room.name, this.room.name);
+                        if (distance < accumulator.distance) {
+                            accumulator = {
+                                room,
+                                distance,
+                            };
+                        }
+                    }
+                    return accumulator;
+                },
+                { room: null, distance: 100 }
+            );
+            if (closestBunkerRoom.room === null) {
+                return;
+            }
+            // evaluate the transfer cost
+            const transferCost = Game.market.calcTransactionCost(100000, this.room.name, closestBunkerRoom.room.name);
+            // add a transfer order to the bunker room
+            if (Memory.rooms[this.room.name].orders === undefined) {
+                Memory.rooms[this.room.name].orders = [];
+            }
+            if (Memory.rooms[this.room.name].orders.filter((order) => order.type === "transfer").length > 0) {
+                return;
+            }
+            Memory.rooms[this.room.name].orders.push({
+                id: `transfer-${Game.time}`,
+                type: "transfer",
+                resource: RESOURCE_ENERGY,
+                amount: 50000,
+                transferCost: transferCost,
+                target: closestBunkerRoom.room.name,
+                status: "open",
+            });
+        }
     }
 }
 

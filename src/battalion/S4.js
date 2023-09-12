@@ -63,8 +63,29 @@ class BattalionS4 {
             );
             // console.log(`Found ${builders.length} special builders`);
             if (builders.length === 0) {
-                // if not, send one
-                const availableSpawns = this.battalion.spawns.filter((spawn) => !spawn.spawning);
+                // if not, get all the bunkers
+                const bunkerRooms = this.battalion.rooms.find((room) => room.memory.type === "bunker");
+                if (!bunkerRooms) {
+                    return;
+                }
+                const closestBunkerRoom = this.battalion.rooms.reduce(
+                    (accumulator, room) => {
+                        if (room.memory.type === "bunker") {
+                            const distance = Game.map.getRoomLinearDistance(room.name, spawnConstructionSites[0].room.name);
+                            if (distance < accumulator.distance) {
+                                accumulator = {
+                                    room,
+                                    distance,
+                                };
+                            }
+                        }
+                        return accumulator;
+                    },
+                    { room: null, distance: 100 }
+                );
+                const availableSpawns = closestBunkerRoom.room.find(FIND_MY_STRUCTURES, {
+                    filter: (structure) => structure.structureType === STRUCTURE_SPAWN,
+                });
                 if (availableSpawns.length === 0) {
                     return;
                 }

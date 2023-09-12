@@ -44,9 +44,7 @@ class BattalionS6 {
             // get all my rooms
             const myRooms = Object.values(Game.rooms).filter((room) => room.controller && room.controller.my);
             myRooms.forEach((room) => {
-                const roomEnergyStorage = room.find(FIND_MY_STRUCTURES, {
-                    filter: (structure) => structure.structureType === STRUCTURE_STORAGE,
-                })[0].store[RESOURCE_ENERGY];
+                const roomEnergyStorage = Game.rooms[room.name].storage ? Game.rooms[room.name].storage.store[RESOURCE_ENERGY] : 0;
                 const energyCost = Game.market.calcTransactionCost(order.remainingAmount, room.name, order.roomName);
                 if (!roomEnergyStorage > energyCost) {
                     return;
@@ -98,7 +96,10 @@ class BattalionS6 {
         }
         Memory.market.activeOrders = activeOrders;
         activeOrders.forEach((order) => {
-            Memory.rooms[order.bestRoom].activeOrder = order;
+            if (!Memory.rooms[order.bestRoom].market) {
+                Memory.rooms[order.bestRoom].market = {};
+            }
+            Memory.rooms[order.bestRoom].market.activeOrder = order;
         });
     }
     getMarketOrders(products) {

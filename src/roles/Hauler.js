@@ -44,6 +44,11 @@ class Hauler extends Soldier {
                 return;
             }
         }
+        if (this.creep.memory.assignment === "distribution") {
+            if (this.fillTransferOrder()) {
+                return;
+            }
+        }
         const distributerActive =
             this.creep.room.find(FIND_MY_CREEPS, {
                 filter: (creep) => creep.memory.assignment == "distribution",
@@ -68,6 +73,12 @@ class Hauler extends Soldier {
         }
 
         if (!distributerActive || this.creep.memory.assignment === "distribution") {
+            // if creep resource is not energy
+            if (Object.keys(this.creep.store)[0] !== RESOURCE_ENERGY) {
+                if (this.resupplyStorage()) {
+                    return;
+                }
+            }
             if (this.resupplySpawn()) {
                 return;
             }
@@ -111,7 +122,13 @@ class Hauler extends Soldier {
                 ? true
                 : false;
         if (this.creep.memory.assignment === "distribution") {
+            if (this.collectResourceFromStorage()) {
+                return;
+            }
             if (this.collectGround()) {
+                return;
+            }
+            if (this.collectTerminal()) {
                 return;
             }
             if (this.collectStorage()) {
@@ -170,6 +187,126 @@ class Hauler extends Soldier {
         } else {
             return false;
         }
+    }
+    fillTransferOrder() {
+        if (!this.creep.room.terminal) {
+            return false;
+        }
+        if (!this.creep.room.storage) {
+            return false;
+        }
+        if (this.creep.room.memory.orders === undefined || this.creep.room.memory.orders.length === 0) {
+            return false;
+        }
+        const order = this.creep.room.memory.orders[0];
+        if (order.type !== "transfer") {
+            return false;
+        }
+        if (order.status !== "open") {
+            return false;
+        }
+        const terminal = this.creep.room.terminal;
+        let terminalEnergyFilled = false;
+        let terminalResourceFilled = false;
+        // if order.resourceType is energy
+        if (order.resourceType === RESOURCE_ENERGY) {
+            if (terminal.store.getUsedCapacity(RESOURCE_ENERGY) >= order.amount + order.transferCost) {
+                terminalEnergyFilled = true;
+                terminalResourceFilled = true;
+            }
+        } else {
+            if (terminal.store.getUsedCapacity(RESOURCE_ENERGY) >= order.transferCost) {
+                terminalEnergyFilled = true;
+            }
+            if (terminal.store.getUsedCapacity(order.resourceType) >= order.amount) {
+                terminalResourceFilled = true;
+            }
+        }
+        if (!terminalEnergyFilled) {
+            this.creep.memory.collect = RESOURCE_ENERGY;
+        } else if (!terminalResourceFilled) {
+            this.creep.memory.collect = order.resourceType;
+        } else {
+            this.creep.memory.collect = undefined;
+            this.creep.room.memory.orders[0].status = "filled";
+            return;
+        }
+        if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0 || this.creep.store.getUsedCapacity(order.resourceType) > 0) {
+            this.resupplyTerminal();
+            return true;
+        }
+        return false;
+    }
+    collectTerminal() {
+        if (!this.creep.room.terminal) {
+            return false;
+        }
+        const terminalResources = Object.keys(this.creep.room.terminal.store);
+        if (terminalResources.length === 0) {
+            return false;
+        }
+        if (this.creep.room.terminal.store.getUsedCapacity(terminalResources[0]) === 0) {
+            return false;
+        }
+        const withdrawResult = this.creep.withdraw(this.creep.room.terminal, terminalResources[0]);
+        if (withdrawResult === ERR_NOT_IN_RANGE) {
+            this.creep.moveTo(this.creep.room.terminal);
+            return true;
+        }
+        if (withdrawResult === OK) {
+            return true;
+        }
+        return false;
+    }
+    resupplyTerminal() {
+        if (!this.creep.room.terminal) {
+            return false;
+        }
+        if (this.creep.room.terminal.store.getFreeCapacity() === 0) {
+            return false;
+        }
+        const resourceCarried = Object.keys(this.creep.store)[0];
+        const transferResult = this.creep.transfer(this.creep.room.terminal, resourceCarried);
+        if (transferResult === ERR_NOT_IN_RANGE) {
+            this.creep.moveTo(this.creep.room.terminal);
+            return true;
+        }
+        if (transferResult === OK) {
+            return true;
+        }
+        return false;
+    }
+    collectResourceFromStorage() {
+        if (!this.creep.room.terminal) {
+            return false;
+        }
+        if (!this.creep.room.storage) {
+            return false;
+        }
+        if (this.creep.room.memory.orders === undefined || this.creep.room.memory.orders.length === 0) {
+            return false;
+        }
+        const order = this.creep.room.memory.orders[0];
+        if (order.type !== "transfer") {
+            return false;
+        }
+        if (order.status !== "open") {
+            return false;
+        }
+        if (this.creep.memory.collect === undefined) {
+            return false;
+        }
+        const collectResult = this.creep.withdraw(this.creep.room.storage, this.creep.memory.collect);
+        if (collectResult === ERR_NOT_IN_RANGE) {
+            this.creep.moveTo(this.creep.room.storage);
+            return true;
+        }
+        if (collectResult === OK) {
+            this.creep.memory.collect = undefined;
+            this.creep.memory.mode = "haul";
+            return true;
+        }
+        return false;
     }
 }
 
