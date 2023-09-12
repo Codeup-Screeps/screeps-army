@@ -49,7 +49,7 @@ class SmallFOB {
                 { x: 20, y: 17 },
             ],
         };
-        (this.extension = {
+        this.extension = {
             pos: [
                 { x: 22, y: 12 },
                 { x: 21, y: 12 },
@@ -64,16 +64,16 @@ class SmallFOB {
                 { x: 25, y: 12 },
                 { x: 24, y: 12 },
             ],
-        }),
-            (this.storage = {
-                pos: [{ x: 23, y: 15 }],
-            });
+        };
+        this.storage = {
+            pos: [{ x: 23, y: 15 }],
+        };
         this.tower = {
             pos: [
                 { x: 23, y: 14 },
                 { x: 20, y: 14 },
-                { x: 23, y: 11 },
                 { x: 26, y: 14 },
+                { x: 23, y: 11 },
                 { x: 23, y: 17 },
             ],
         };

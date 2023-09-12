@@ -51,7 +51,7 @@ class Blueprint {
             if (structureType === "roadConnectPoints") continue;
             this.blueprint[structureType].pos.forEach((pos) => {
                 // if this loc is a wall, skip it
-                const storageEnergy = this.room.storage.store[RESOURCE_ENERGY];
+                const storageEnergy = this.room.storage ? this.room.storage.store[RESOURCE_ENERGY] : 0;
                 if (this.room.lookForAt(LOOK_TERRAIN, pos.x, pos.y)[0] === "wall") return;
                 if (structureType === "rampart" && storageEnergy > 80000 && this.room.controller.level < 6) {
                     return;

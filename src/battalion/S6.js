@@ -11,7 +11,7 @@ class BattalionS6 {
         this.recordMarketOrders();
     }
     recordMarketOrders() {
-        if (Game.time % 5 === 0) {
+        if (Game.time % 100 === 0) {
             const allMarketOrders = this.getMarketOrders();
             const filteredMarketOrders = this.getMarketOrders(Object.keys(this.minerals));
             if (!Memory.market) {
@@ -58,7 +58,7 @@ class BattalionS6 {
                     return;
                 }
                 const isMyOrder = Game.market.orders[order.id] ? true : false;
-                if (order.price < 0.1 || isMyOrder) {
+                if (order.price < 0.01 || isMyOrder) {
                     return;
                 }
                 const existingOrder = Memory.market.qualifiedOrders.find((o) => o.id === order.id);
@@ -77,6 +77,28 @@ class BattalionS6 {
                     Memory.market.qualifiedOrders.push(order);
                 }
             });
+        });
+        this.issueActiveOrders();
+    }
+    issueActiveOrders() {
+        if (Memory.market.qualifiedOrders.length === 0) {
+            return;
+        }
+        // create an array where bestRoom in Memory.market.qualifiedOrders has to be unique, i.e. only one active order per best room
+        let activeOrders = [];
+        Memory.market.qualifiedOrders.forEach((order) => {
+            const listAlreadyHasOrder = activeOrders.some((o) => o.bestRoom === order.bestRoom);
+            const roomAlreadyHasOrder = Memory.rooms[order.bestRoom].activeOrder;
+            if (!listAlreadyHasOrder && !roomAlreadyHasOrder) {
+                activeOrders.push(order);
+            }
+        });
+        if (activeOrders.length === 0) {
+            return;
+        }
+        Memory.market.activeOrders = activeOrders;
+        activeOrders.forEach((order) => {
+            Memory.rooms[order.bestRoom].activeOrder = order;
         });
     }
     getMarketOrders(products) {
